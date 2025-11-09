@@ -1,6 +1,6 @@
 [workspace]
 members = [
-#    "services/web-service",
+    "services/web-service",
 #    "services/api-service", 
 #    "services/cli-tool",
     "shared/common",
