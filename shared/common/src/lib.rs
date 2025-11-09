@@ -25,3 +25,15 @@ pub struct RepoInfo {
     pub stars: u32,
     pub language: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn message_creation() {
+        let msg = Message::new("test".into());
+        assert_eq!(msg.content, "test");
+        assert!(msg.timestamp > 0);
+    }
+}
