@@ -14,7 +14,7 @@ async fn root() -> Json<Message> {
     Json(Message::new("Hello from web-service".into()))
 }
 
-async fn repo() -> Json<RepoInfo> {
+async fn repo() -> Result<Json<RepoInfo>, String> {
     let url = "https://codeberg.org/api/v1/repos/querret/rust-nix-monorepo";
     
     let client = reqwest::Client::new();
@@ -23,16 +23,19 @@ async fn repo() -> Json<RepoInfo> {
         .header("User-Agent", "rust-nix-monorepo-demo")
         .send()
         .await
-        .unwrap();
+        .map_err(|e| format!("Request failed: {}", e))?;
     
-    let repo: CodebergRepo = response.json().await.unwrap();
+    let repo: CodebergRepo = response
+        .json()
+        .await
+        .map_err(|e| format!("JSON parse failed: {}",e))?;
     
-    Json(RepoInfo {
+    Ok(Json(RepoInfo {
         name: repo.name,
         description: repo.description,
         stars: repo.stars_count,
         language: repo.language,
-    })
+    }))
 }
 
 #[tokio::main]
