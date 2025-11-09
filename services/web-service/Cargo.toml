@@ -1,0 +1,12 @@
+[package]
+name = "web-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+common = { path = "../../shared/common" }
+tokio = { workspace = true }
+axum = { workspace = true }
+serde_json = { workspace = true }
+serde = { workspace = true }
+reqwest = { version = "0.12", features = ["json"] }

@@ -1,0 +1,14 @@
+[workspace]
+members = [
+    "services/web-service",
+    "services/api-service", 
+    "services/cli-tool",
+    "shared/common",
+]
+resolver = "2"
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = "0.7"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
