@@ -9,36 +9,42 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: cachix/install-nix-action@v26
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-      
+
       - name: Build web-service
         run: nix build .#web-service --print-build-logs
-      
+
       - name: Copy web-service binary
         run: |
           mkdir -p artifacts
           cp -L result/bin/web-service artifacts/web-service
           chmod +x artifacts/web-service
-      
+
       - name: Build api-service
         run: nix build .#api-service --print-build-logs
-      
+
       - name: Copy api-service binary
         run: |
           cp -L result/bin/api-service artifacts/api-service
           chmod +x artifacts/api-service
-      
+
       - name: Build cli-tool
         run: nix build .#cli-tool --print-build-logs
-      
+
+      - name: Copy cli-tool binary
+        run: |
+          cp -L result/bin/cli-tool artifacts/cli-tool
+          chmod +x artifacts/cli-tool
+
       - name: Run tests
         run: nix develop --command cargo test
-      
+
       # Upload built binaries as artifacts
       - name: Upload web-service binary
         uses: actions/upload-artifact@v4
@@ -46,14 +52,21 @@ jobs:
           name: web-service
           path: artifacts/web-service
           retention-days: 7
-      
+
       - name: Upload api-service binary
         uses: actions/upload-artifact@v4
         with:
           name: api-service
           path: artifacts/api-service
           retention-days: 7
-      
+
+      - name: Upload cli-tool binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-tool
+          path: artifacts/cli-tool
+          retention-days: 7
+
       - name: Upload static files
         uses: actions/upload-artifact@v4
         with:
@@ -82,6 +95,12 @@ jobs:
           name: api-service
           path: ./binaries/
 
+      - name: Download cli-tool binary
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-tool
+          path: ./binaries/
+
       - name: Download static files
         uses: actions/download-artifact@v4
         with:
@@ -93,7 +112,7 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Write private key from GitHub Secret (tumbleweed.pem contents)
+          # Private key from GitHub secret (tumbleweed.pem contents)
           printf '%s\n' "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
@@ -104,52 +123,67 @@ jobs:
         run: |
           chmod +x ./binaries/web-service
 
-          scp -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             ./binaries/web-service \
             ubuntu@${{ secrets.AWS_HOST }}:/tmp/web-service
 
-          scp -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
+          # Copy static assets (creates /tmp/static on remote)
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             -r ./static \
             ubuntu@${{ secrets.AWS_HOST }}:/tmp/
 
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
-            ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
-              sudo mv /tmp/web-service /usr/local/bin/web-service-monorepo
-              sudo chmod +x /usr/local/bin/web-service-monorepo
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            ubuntu@${{ secrets.AWS_HOST }} '
+            set -e
+            sudo mv /tmp/web-service /usr/local/bin/web-service-monorepo
+            sudo chmod +x /usr/local/bin/web-service-monorepo
 
-              sudo mkdir -p /usr/local/share/web-service/static
-              sudo cp -r /tmp/static/* /usr/local/share/web-service/static/
-              sudo rm -rf /tmp/static
+            sudo mkdir -p /usr/local/share/web-service/static
+            sudo cp -r /tmp/static/* /usr/local/share/web-service/static/
+            sudo rm -rf /tmp/static
 
-              sudo systemctl restart web-service-monorepo
-            EOF
+            sudo systemctl restart web-service-monorepo
+          '
 
       - name: Deploy api-service
         run: |
           chmod +x ./binaries/api-service
 
-          scp -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
             ./binaries/api-service \
             ubuntu@${{ secrets.AWS_HOST }}:/tmp/api-service
 
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
-            ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
-              sudo mv /tmp/api-service /usr/local/bin/api-service-monorepo
-              sudo chmod +x /usr/local/bin/api-service-monorepo
-              sudo systemctl restart api-service-monorepo
-            EOF
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            ubuntu@${{ secrets.AWS_HOST }} '
+            set -e
+            sudo mv /tmp/api-service /usr/local/bin/api-service-monorepo
+            sudo chmod +x /usr/local/bin/api-service-monorepo
+            sudo systemctl restart api-service-monorepo
+          '
+
+      - name: Deploy cli-tool
+        run: |
+          chmod +x ./binaries/cli-tool
+
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            ./binaries/cli-tool \
+            ubuntu@${{ secrets.AWS_HOST }}:/tmp/cli-tool
+
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            ubuntu@${{ secrets.AWS_HOST }} '
+            set -e
+            sudo mv /tmp/cli-tool /usr/local/bin/cli-tool-monorepo
+            sudo chmod +x /usr/local/bin/cli-tool-monorepo
+            sudo systemctl restart cli-tool-monorepo
+          '
 
       - name: Verify deployment
         run: |
-          ssh -i ~/.ssh/deploy_key \
-            -o StrictHostKeyChecking=yes \
-            ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
-              echo "Checking service status..."
-              sudo systemctl status web-service-monorepo --no-pager || true
-              sudo systemctl status api-service-monorepo --no-pager || true
-            EOF
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes \
+            ubuntu@${{ secrets.AWS_HOST }} '
+            echo "Checking service status..."
+            sudo systemctl status web-service-monorepo --no-pager || true
+            sudo systemctl status api-service-monorepo --no-pager || true
+            sudo systemctl status cli-tool-monorepo --no-pager || true
+          '
+
