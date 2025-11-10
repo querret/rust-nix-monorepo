@@ -71,10 +71,10 @@ jobs:
 
       # Download pre-built binaries
       - name: Download web-service binary
-      uses: actions/download-artifact@v4
-        with:
-          name: web-service
-          path: ./binaries/
+        uses: actions/download-artifact@v4
+          with:
+            name: web-service
+            path: ./binaries/
 
       - name: Download api-service binary
         uses: actions/download-artifact@v4
@@ -135,7 +135,7 @@ jobs:
             -o StrictHostKeyChecking=yes \
             ./binaries/api-service \
             ubuntu@${{ secrets.AWS_HOST }}:/tmp/api-service
-            
+
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=yes \
             ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
