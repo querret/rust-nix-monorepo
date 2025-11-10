@@ -19,8 +19,19 @@ jobs:
       - name: Build web-service
         run: nix build .#web-service --print-build-logs
       
+      - name: Copy web-service binary
+        run: |
+          mkdir -p artifacts
+          cp -L result/bin/web-service artifacts/web-service
+          chmod +x artifacts/web-service
+      
       - name: Build api-service
         run: nix build .#api-service --print-build-logs
+      
+      - name: Copy api-service binary
+        run: |
+          cp -L result/bin/api-service artifacts/api-service
+          chmod +x artifacts/api-service
       
       - name: Build cli-tool
         run: nix build .#cli-tool --print-build-logs
@@ -33,14 +44,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-service
-          path: result/bin/web-service
+          path: artifacts/web-service
           retention-days: 7
       
       - name: Upload api-service binary
         uses: actions/upload-artifact@v4
         with:
           name: api-service
-          path: result/bin/api-service
+          path: artifacts/api-service
           retention-days: 7
       
       - name: Upload static files
