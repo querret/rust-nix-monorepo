@@ -65,65 +65,91 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+
     steps:
       - uses: actions/checkout@v4
-      
+
       # Download pre-built binaries
       - name: Download web-service binary
-        uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v4
         with:
           name: web-service
           path: ./binaries/
-      
+
       - name: Download api-service binary
         uses: actions/download-artifact@v4
         with:
           name: api-service
           path: ./binaries/
-      
+
       - name: Download static files
         uses: actions/download-artifact@v4
         with:
           name: static-files
           path: ./static/
-      
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 700 ~/.ssh
+
+          # Write private key from GitHub Secret (tumbleweed.pem contents)
+          printf '%s\n' "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
-      
+
+          # Pre-populate known_hosts for strict host key checking
+          ssh-keyscan -H "${{ secrets.AWS_HOST }}" >> ~/.ssh/known_hosts
+
       - name: Deploy web-service
         run: |
           chmod +x ./binaries/web-service
-          scp -i ~/.ssh/deploy_key ./binaries/web-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/web-service
-          scp -i ~/.ssh/deploy_key -r ./static/* ec2-user@${{ secrets.AWS_HOST }}:/tmp/static/
-          
-          ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
-            sudo mv /tmp/web-service /usr/local/bin/web-service-monorepo
-            sudo chmod +x /usr/local/bin/web-service-monorepo
-            sudo mkdir -p /usr/local/share/web-service/static
-            sudo cp -r /tmp/static/* /usr/local/share/web-service/static/
-            sudo rm -rf /tmp/static
-            sudo systemctl restart web-service-monorepo
-          EOF
-      
+
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            ./binaries/web-service \
+            ubuntu@${{ secrets.AWS_HOST }}:/tmp/web-service
+
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            -r ./static \
+            ubuntu@${{ secrets.AWS_HOST }}:/tmp/
+
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+              sudo mv /tmp/web-service /usr/local/bin/web-service-monorepo
+              sudo chmod +x /usr/local/bin/web-service-monorepo
+
+              sudo mkdir -p /usr/local/share/web-service/static
+              sudo cp -r /tmp/static/* /usr/local/share/web-service/static/
+              sudo rm -rf /tmp/static
+
+              sudo systemctl restart web-service-monorepo
+            EOF
+
       - name: Deploy api-service
         run: |
           chmod +x ./binaries/api-service
-          scp -i ~/.ssh/deploy_key ./binaries/api-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/api-service
-          
-          ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
-            sudo mv /tmp/api-service /usr/local/bin/api-service-monorepo
-            sudo chmod +x /usr/local/bin/api-service-monorepo
-            sudo systemctl restart api-service-monorepo
-          EOF
-      
+
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            ./binaries/api-service \
+            ubuntu@${{ secrets.AWS_HOST }}:/tmp/api-service
+            
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+              sudo mv /tmp/api-service /usr/local/bin/api-service-monorepo
+              sudo chmod +x /usr/local/bin/api-service-monorepo
+              sudo systemctl restart api-service-monorepo
+            EOF
+
       - name: Verify deployment
         run: |
-          ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
-            echo "Checking service status..."
-            sudo systemctl status web-service-monorepo --no-pager || true
-            sudo systemctl status api-service-monorepo --no-pager || true
-          EOF
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=yes \
+            ubuntu@${{ secrets.AWS_HOST }} << 'EOF'
+              echo "Checking service status..."
+              sudo systemctl status web-service-monorepo --no-pager || true
+              sudo systemctl status api-service-monorepo --no-pager || true
+            EOF
