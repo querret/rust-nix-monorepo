@@ -27,6 +27,28 @@ jobs:
       
       - name: Run tests
         run: nix develop --command cargo test
+      
+      # Upload built binaries as artifacts
+      - name: Upload web-service binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-service
+          path: result/bin/web-service
+          retention-days: 7
+      
+      - name: Upload api-service binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-service
+          path: result/bin/api-service
+          retention-days: 7
+      
+      - name: Upload static files
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-files
+          path: services/web-service/static/
+          retention-days: 7
 
   deploy:
     needs: build
@@ -35,14 +57,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: cachix/install-nix-action@v26
+      # Download pre-built binaries
+      - name: Download web-service binary
+        uses: actions/download-artifact@v4
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
+          name: web-service
+          path: ./binaries/
       
-      - name: Build services for deployment
-        run: |
-          nix build .#web-service
-          nix build .#api-service
+      - name: Download api-service binary
+        uses: actions/download-artifact@v4
+        with:
+          name: api-service
+          path: ./binaries/
+      
+      - name: Download static files
+        uses: actions/download-artifact@v4
+        with:
+          name: static-files
+          path: ./static/
       
       - name: Setup SSH
         run: |
@@ -53,23 +85,34 @@ jobs:
       
       - name: Deploy web-service
         run: |
-          scp -i ~/.ssh/deploy_key result/bin/web-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/web-service
-          scp -i ~/.ssh/deploy_key -r services/web-service/static ec2-user@${{ secrets.AWS_HOST }}:/tmp/
+          chmod +x ./binaries/web-service
+          scp -i ~/.ssh/deploy_key ./binaries/web-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/web-service
+          scp -i ~/.ssh/deploy_key -r ./static/* ec2-user@${{ secrets.AWS_HOST }}:/tmp/static/
           
           ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
             sudo mv /tmp/web-service /usr/local/bin/web-service-monorepo
             sudo chmod +x /usr/local/bin/web-service-monorepo
             sudo mkdir -p /usr/local/share/web-service/static
             sudo cp -r /tmp/static/* /usr/local/share/web-service/static/
+            sudo rm -rf /tmp/static
             sudo systemctl restart web-service-monorepo
           EOF
       
       - name: Deploy api-service
         run: |
-          scp -i ~/.ssh/deploy_key result/bin/api-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/api-service
+          chmod +x ./binaries/api-service
+          scp -i ~/.ssh/deploy_key ./binaries/api-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/api-service
           
           ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
             sudo mv /tmp/api-service /usr/local/bin/api-service-monorepo
             sudo chmod +x /usr/local/bin/api-service-monorepo
             sudo systemctl restart api-service-monorepo
+          EOF
+      
+      - name: Verify deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
+            echo "Checking service status..."
+            sudo systemctl status web-service-monorepo --no-pager || true
+            sudo systemctl status api-service-monorepo --no-pager || true
           EOF
