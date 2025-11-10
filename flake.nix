@@ -27,7 +27,7 @@
         ];
 
         # Build function for service
-        buildService = { pname, cargoToml }:
+        buildService = { pname, cargoToml, includeStatic ? false }:
           pkgs.rustPlatform.buildRustPackage {
             inherit pname;
             version = "0.1.0";
@@ -41,17 +41,24 @@
             
             nativeBuildInputs = commonBuildInputs;
             
-            # Prereq for reqwest/openssl
             buildInputs = [ pkgs.openssl ];
             PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+            
+            # Include static files if needed
+            postInstall = if includeStatic then ''
+              mkdir -p $out/static
+              if [ -d static ]; then
+                cp -r static/* $out/static/
+              fi
+            '' else "";
           };
-
       in
       {
         packages = {
           web-service = buildService {
             pname = "web-service";
             cargoToml = "services/web-service";
+            includeStatic = true;
           };
           
           api-service = buildService {
