@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rust Nix Monorepo Demo</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🦀 Rust Nix Monorepo</h1>
+        <p class="subtitle">Demonstrating Cargo workspaces, Nix flakes, and automated deployment</p>
+        
+        <div id="content">
+            <div class="loading">Loading repository information...</div>
+        </div>
+        
+        <div class="tech-stack">
+            <h3>Tech Stack</h3>
+            <span class="badge">Rust</span>
+            <span class="badge">Nix Flakes</span>
+            <span class="badge">Axum</span>
+            <span class="badge">GitHub Actions</span>
+            <span class="badge">AWS EC2</span>
+        </div>
+    </div>
+
+    <script>
+        async function loadRepoInfo() {
+            const content = document.getElementById('content');
+            
+            try {
+                const response = await fetch('/api/repo');
+                if (!response.ok) throw new Error('Failed to fetch');
+                
+                const data = await response.json();
+                
+                content.innerHTML = `
+                    <div class="repo-info">
+                        <h2>📦 ${data.name}</h2>
+                        <div class="info-row">
+                            <span class="info-label">Description</span>
+                            <span class="info-value">${data.description || 'No description'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Language</span>
+                            <span class="info-value">${data.language || 'Unknown'}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Stars</span>
+                            <span class="info-value stars">⭐ ${data.stars}</span>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> Could not fetch repository information from Codeberg API.
+                        <br><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        loadRepoInfo();
+    </script>
+</body>
+</html>
