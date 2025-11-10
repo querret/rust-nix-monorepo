@@ -4,6 +4,34 @@
 
 Demonstrates Cargo workspace management and Nix flakes for building multiple Rust services with shared dependencies.
 
+## Live Demo
+
+🌐 **Deployed on AWS EC2:** http://54.90.165.134:8080/
+
+The demo is automatically deployed via GitHub Actions on every push to main.
+
+### Endpoints
+
+- **Web Interface:** http://54.90.165.134:8080/
+- **API Health Check:** http://54.90.165.134:8080/api/health
+- **Repository Info:** http://54.90.165.134:8080/api/repo
+- **API Service Status:** http://54.90.165.134:8090/status
+
+## CI/CD Pipeline
+
+Automated build and deployment pipeline:
+
+1. **Build Phase** - All services built with Nix
+2. **Test Phase** - Test suite execution
+3. **Deploy Phase** - Automatic deployment to AWS EC2 on main branch
+
+Every commit triggers:
+- ✅ Nix builds for all services
+- ✅ Test suite execution
+- ✅ Deployment to production (main branch only)
+
+All builds use Nix flakes for complete reproducibility across local development, CI, and production environments.
+
 ## Structure
 ```
 rust-nix-monorepo/

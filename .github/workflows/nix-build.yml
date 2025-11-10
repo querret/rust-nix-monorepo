@@ -1,4 +1,4 @@
-name: Nix Build and Test
+name: Nix Build and Deploy
 
 on:
   push:
@@ -10,11 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-      - name: Install Nix
-        uses: cachix/install-nix-action@v26
+      - uses: cachix/install-nix-action@v26
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       
@@ -27,15 +25,51 @@ jobs:
       - name: Build cli-tool
         run: nix build .#cli-tool --print-build-logs
       
-      - name: Build all services
-        run: nix build --print-build-logs
-      
       - name: Run tests
         run: nix develop --command cargo test
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
       
-      - name: Verify binaries
+      - uses: cachix/install-nix-action@v26
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      
+      - name: Build services for deployment
         run: |
-          ls -la result/bin/
-          file result/bin/web-service
-          file result/bin/api-service
-          file result/bin/cli-tool
+          nix build .#web-service
+          nix build .#api-service
+      
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy web-service
+        run: |
+          scp -i ~/.ssh/deploy_key result/bin/web-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/web-service
+          scp -i ~/.ssh/deploy_key -r services/web-service/static ec2-user@${{ secrets.AWS_HOST }}:/tmp/
+          
+          ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
+            sudo mv /tmp/web-service /usr/local/bin/web-service-monorepo
+            sudo chmod +x /usr/local/bin/web-service-monorepo
+            sudo mkdir -p /usr/local/share/web-service/static
+            sudo cp -r /tmp/static/* /usr/local/share/web-service/static/
+            sudo systemctl restart web-service-monorepo
+          EOF
+      
+      - name: Deploy api-service
+        run: |
+          scp -i ~/.ssh/deploy_key result/bin/api-service ec2-user@${{ secrets.AWS_HOST }}:/tmp/api-service
+          
+          ssh -i ~/.ssh/deploy_key ec2-user@${{ secrets.AWS_HOST }} << 'EOF'
+            sudo mv /tmp/api-service /usr/local/bin/api-service-monorepo
+            sudo chmod +x /usr/local/bin/api-service-monorepo
+            sudo systemctl restart api-service-monorepo
+          EOF
