@@ -1,7 +1,7 @@
 use common::RepoInfo;
 
 fn main() {
-    match reqwest::blocking::get("http://localhost:3000/repo") {
+    match reqwest::blocking::get("http://localhost:8080/repo") {
         Ok(response) => {
             if let Ok(info) = response.json::<RepoInfo>() {
                 println!("Repository: {}", info.name);

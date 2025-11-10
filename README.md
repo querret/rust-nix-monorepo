@@ -1,6 +1,8 @@
 # Rust Nix Monorepo Demo
 
-Cargo workspace management and Nix flakes for building multiple Rust services with shared dependencies.
+[![Nix Build and Test](https://github.com/querret/rust-nix-monorepo/actions/workflows/nix-build.yml/badge.svg)](https://github.com/querret/rust-nix-monorepo/actions/workflows/nix-build.yml)
+
+Demonstrates Cargo workspace management and Nix flakes for building multiple Rust services with shared dependencies.
 
 ## Structure
 ```
@@ -8,8 +10,8 @@ rust-nix-monorepo/
 ├── flake.nix              # Nix flake managing all builds
 ├── Cargo.toml             # Workspace root
 ├── services/
-│   ├── web-service/       # HTTP service (port 3000)
-│   ├── api-service/       # HTTP service (port 4000)
+│   ├── web-service/       # HTTP service (port 8080)
+│   ├── api-service/       # HTTP service (port 8090)
 │   └── cli-tool/          # CLI client
 └── shared/
     └── common/            # Shared library

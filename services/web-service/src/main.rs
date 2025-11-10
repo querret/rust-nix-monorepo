@@ -44,7 +44,7 @@ async fn main() {
         .route("/", get(root))
         .route("/repo", get(repo));
         
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     println!("Web service listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
