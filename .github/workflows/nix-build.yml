@@ -72,9 +72,9 @@ jobs:
       # Download pre-built binaries
       - name: Download web-service binary
         uses: actions/download-artifact@v4
-          with:
-            name: web-service
-            path: ./binaries/
+        with:
+          name: web-service
+          path: ./binaries/
 
       - name: Download api-service binary
         uses: actions/download-artifact@v4
