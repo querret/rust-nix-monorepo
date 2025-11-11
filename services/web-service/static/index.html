@@ -38,24 +38,56 @@
                 content.innerHTML = `
                     <div class="repo-info">
                         <h2>📦 ${data.name}</h2>
+
+                       <div class="info-row">
+                            <span class="info-label">Repository</span>
+                            <span class="info-value repo-links">
+                                <a href="https://github.com/querret/rust-nix-monorepo/actions/workflows/nix-build.yml" target="_blank" rel="noopener" class="build-badge">
+                                    <img
+                                        src="https://github.com/querret/rust-nix-monorepo/actions/workflows/nix-build.yml/badge.svg"
+                                        alt="Nix Build and Deploy Status"
+                                    />
+                                </a>
+                                <span class="divider">·</span>
+                                <a href="https://github.com/querret/rust-nix-monorepo" target="_blank" rel="noopener">GitHub</a>
+                                <span class="divider">·</span>
+                                <a href="https://codeberg.org/querret/rust-nix-monorepo" target="_blank" rel="noopener">Codeberg</a>
+                            </span>
+                        </div>
+
+
                         <div class="info-row">
                             <span class="info-label">Description</span>
-                            <span class="info-value">${data.description || 'No description'}</span>
+                            <span class="info-value">${data.description || 'No description available'}</span>
                         </div>
+
                         <div class="info-row">
-                            <span class="info-label">Language</span>
-                            <span class="info-value">${data.language || 'Unknown'}</span>
+                            <span class="info-label">Primary language</span>
+                            <span class="info-value">${data.primary_language || 'Unknown'}</span>
                         </div>
+
                         <div class="info-row">
-                            <span class="info-label">Stars</span>
-                            <span class="info-value stars">⭐ ${data.stars}</span>
+                            <span class="info-label">Languages used</span>
+                            <span class="info-value">
+                                ${
+                                data.languages && data.languages.length
+                                    ? data.languages.join(', ')
+                                    : 'No language data available'
+                                }
+                            </span>
+                        </div>
+
+                        <div class="info-row">
+                            <span class="info-label">⭐ Stars</span>
+                            <span class="info-value stars">${data.stars ?? 0}</span>
                         </div>
                     </div>
-                `;
+                    `;
+
             } catch (error) {
                 content.innerHTML = `
                     <div class="error">
-                        <strong>Error:</strong> Could not fetch repository information from Codeberg API.
+                        <strong>Error:</strong> Could not fetch repository information from Github API.
                         <br><br>
                         ${error.message}
                     </div>

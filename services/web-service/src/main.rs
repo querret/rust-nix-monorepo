@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{
     routing::get,
     Json, Router,
@@ -7,11 +9,11 @@ use serde::Deserialize;
 use tower_http::services::ServeDir;
 
 #[derive(Deserialize)]
-struct CodebergRepo {
+struct GithubRepo {
     name: String,
     description: Option<String>,
-    stars_count: u32,
-    language: Option<String>,
+    #[serde(rename = "language")]
+    primary_language: Option<String>,
 }
 
 async fn health() -> Json<Message> {
@@ -19,23 +21,34 @@ async fn health() -> Json<Message> {
 }
 
 async fn repo() -> Json<RepoInfo> {
-    let url = "https://codeberg.org/api/v1/repos/querret/rust-nix-monorepo";
-    
     let client = reqwest::Client::new();
-    let response = client
-        .get(url)
+
+    let repo_fut = client
+        .get("https://api.github.com/repos/querret/rust-nix-monorepo")
         .header("User-Agent", "rust-nix-monorepo-demo")
-        .send()
-        .await
-        .unwrap();
-    
-    let repo: CodebergRepo = response.json().await.unwrap();
-    
+        .send();
+
+    let langs_fut = client
+        .get("https://api.github.com/repos/querret/rust-nix-monorepo/languages")
+        .header("User-Agent", "rust-nix-monorepo-demo")
+        .send();
+
+    let (repo_res, langs_res) = tokio::join!(repo_fut, langs_fut);
+
+    let repo: GithubRepo = repo_res.unwrap().json().await.unwrap();
+    let langs_map: HashMap<String, u64> = langs_res.unwrap().json().await.unwrap();
+
+    let mut languages: Vec<(String, u64)> = langs_map.into_iter().collect();
+    languages.sort_by(|a, b| b.1.cmp(&a.1));
+
+    let languages: Vec<String> = languages.into_iter().map(|(lang, _)| lang).collect();
+
+
     Json(RepoInfo {
         name: repo.name,
         description: repo.description,
-        stars: repo.stars_count,
-        language: repo.language,
+        primary_language: repo.primary_language,
+        languages,
     })
 }
 

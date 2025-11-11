@@ -5,11 +5,11 @@ fn main() {
         Ok(response) => {
             if let Ok(info) = response.json::<RepoInfo>() {
                 println!("Repository: {}", info.name);
-                println!("Stars: {}", info.stars);
+                println!("Primary Language: {:#?}", info.primary_language);
                 if let Some(desc) = info.description {
                     println!("Description: {}", desc);
                 }
-                if let Some(lang) = info.language {
+                if let Some(lang) = info.primary_language {
                     println!("Language: {}", lang);
                 }
                 return;

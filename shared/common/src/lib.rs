@@ -22,9 +22,10 @@ impl Message {
 pub struct RepoInfo {
     pub name: String,
     pub description: Option<String>,
-    pub stars: u32,
-    pub language: Option<String>,
+    pub primary_language: Option<String>,
+    pub languages: Vec<String>,
 }
+
 
 #[cfg(test)]
 mod tests {

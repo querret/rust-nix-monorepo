@@ -67,6 +67,9 @@ h1 {
 
 .info-value {
     color: #2d3748;
+    /* text-align: right;    */
+    /* max-width: 65%; */
+    word-break: break-word;
 }
 
 .loading {
@@ -108,4 +111,22 @@ h1 {
     border-radius: 20px;
     font-size: 12px;
     margin: 4px;
+}
+
+.repo-links {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.build-badge img {
+  height: 20px;
+  border-radius: 0.25rem;
+  transition: opacity 0.2s ease;
+}
+
+.build-badge img:hover {
+  opacity: 0.8;
 }
