@@ -129,12 +129,16 @@ cargo run -p cli-tool
 cargo test
 ```
 
+## Deployment
+
+Commit changes, push to the repository. Once merged to main, GitHub Actions will build and deploy to AWS.
+
 ## Technical Highlights
 
 1. **Workspace Dependencies** - Centralized version management in root `Cargo.toml`
-2. **Nix Flake Outputs** - Each service builds independently via `nix build .#<service>`
+2. **Nix Flake Outputs** - Reproducable and isolated builds for each service
 3. **Shared Library Pattern** - Common types and logic in `shared/common` crate
-4. **Self-Referential Demo** - Web service fetches this repo's metadata from Codeberg API
+4. **Self-Referential Demo** - Web service fetches this repo's metadata from GitHub API
 
 ## Demonstrated Skills
 
