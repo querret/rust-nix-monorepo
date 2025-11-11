@@ -49,7 +49,7 @@ async fn main() {
     // Serve static files from ./static
     let app = Router::new()
         .nest("/api", api_routes)
-        .nest_service("/", ServeDir::new("services/web-service/static"));
+        .nest_service("/", ServeDir::new("static"));
         
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     println!("Web service listening on {}", listener.local_addr().unwrap());
