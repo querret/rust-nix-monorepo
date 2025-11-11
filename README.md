@@ -6,34 +6,45 @@ Demonstrates Cargo workspace management and Nix flakes for building multiple Rus
 
 ## Live Demo
 
-🌐 **Deployed on AWS EC2:** http://54.90.165.134:8080/
+Automatically built and deployed on every push to main.
 
-The demo is automatically deployed via GitHub Actions on every push to main.
+- Web Interface: http://54.90.165.134:8080/
+- Health Check: http://54.90.165.134:8080/api/health
+- Repository Info API: http://54.90.165.134:8080/api/repo
+- API Service Status: http://54.90.165.134:8090/status
 
-### Endpoints
+## Tech Stack
 
-- **Web Interface:** http://54.90.165.134:8080/
-- **API Health Check:** http://54.90.165.134:8080/api/health
-- **Repository Info:** http://54.90.165.134:8080/api/repo
-- **API Service Status:** http://54.90.165.134:8090/status
+| Area                          | Technology                 |
+| ----------------------------- | -------------------------- |
+| Language                      | Rust                       |
+| Build System                  | Nix Flakes                 |
+| CI/CD                         | GitHub Actions             |
+| Hosting                       | AWS EC2 (Ubuntu)           |
+| Process Management            | systemd                    |
+| Package/Dependency Management | Cargo + Nix                |
+| Web Framework                 | Axum                       |
+| HTTP Client                   | Reqwest                    |
+| Deployment                    | SSH + systemctl automation |
 
 ## CI/CD Pipeline
 
-Automated build and deployment pipeline:
+| Phase      | Description                               |
+| :--------- | :---------------------------------------- |
+| **Build**  | All services built using Nix flakes       |
+| **Test**   | Test suite execution via Cargo            |
+| **Deploy** | Automatic deployment to AWS EC2 on `main` |
 
-1. **Build Phase** - All services built with Nix
-2. **Test Phase** - Test suite execution
-3. **Deploy Phase** - Automatic deployment to AWS EC2 on main branch
+Each commit to main triggers:
 
-Every commit triggers:
-- ✅ Nix builds for all services
-- ✅ Test suite execution
-- ✅ Deployment to production (main branch only)
+- Nix builds for all services
+- Test suite execution
+- Automatic production deployment on the main branch
 
-All builds use Nix flakes for complete reproducibility across local development, CI, and production environments.
+All builds use Nix flakes for complete reproducibility across local, CI, and production environments.
 
-## Structure
-```
+## Project Structure
+``` bash
 rust-nix-monorepo/
 ├── flake.nix              # Nix flake managing all builds
 ├── Cargo.toml             # Workspace root
@@ -47,14 +58,16 @@ rust-nix-monorepo/
 
 ## Features
 
-- **Cargo workspace** with shared dependency versions
-- **Nix flake** with individual service outputs
-- **Shared library** used across all services
-- **Service interaction** - CLI calls web service, web service fetches external data
+- Cargo workspace with shared dependencies
+- Nix flake outputs for each service
+- Shared library used across all services
+- Service interaction:
+    - CLI calls the web service
+    - Web service fetches repository metadata from the GitHub API
 
 ## Building
 ```bash
-# Build individual service
+# Build individual service from within the service folder
 nix build .#web-service
 nix build .#api-service
 nix build .#cli-tool
@@ -67,16 +80,40 @@ nix develop
 ```
 
 ## Running
-```bash
-# Start web service
-./result/bin/web-service &
 
-# Start API service  
-./result/bin/api-service &
+All services are deployed and managed by systemd on the target host.
 
-# Run CLI (fetches from web service)
-./result/bin/cli-tool
+Each service runs as dedicated unit:
+| Service     | Systemd Unit                   | Port |
+| ----------- | ------------------------------ | ---- |
+| Web Service | `web-service-monorepo.service` | 8080 |
+| API Service | `api-service-monorepo.service` | 8090 |
+| CLI Tool    | `cli-tool-monorepo.service`    | —    |
+
+### Start, Stop, and Restart Services
+``` bash
+# Start all services
+sudo systemctl start web-service-monorepo
+sudo systemctl start api-service-monorepo
+sudo systemctl start cli-tool-monorepo
+
+# Restart a specific service
+sudo systemctl restart web-service-monorepo
+
+# Stop a service
+sudo systemctl stop api-service-monorepo
 ```
+
+### Check Status and Logs for Services
+``` bash
+# Check status
+sudo systemctl status web-service-monorepo
+
+# View logs
+sudo journalctl -u web-service-monorepo -f
+```
+
+Each unit is automatically restarted on failure and included in the CI/CD deployment process.
 
 ## Development
 ```bash
@@ -105,8 +142,9 @@ cargo test
 - Nix flakes for reproducible builds
 - Cargo workspace patterns
 - Service composition and communication
+- Continuous integration and deployment
 - Infrastructure as Code principles
 
 ---
 
-Built in 5 hours while learning Nix.
+Built over a weekend while learning Nix to demonstrate end-to-end reproducibility, multi-service coordination, and automated deployment.
